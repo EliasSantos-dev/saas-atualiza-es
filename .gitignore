@@ -1,8 +1,10 @@
 __pycache__/
 *.mp3
 *.json
+!manifest.json
 *.zip
 *.rar
 venv/
 .env
 data/
+16gb_atualizacao_abril_2026_@kelcds/
