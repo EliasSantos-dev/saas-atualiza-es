@@ -1,63 +1,40 @@
-import os
-import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
-from dotenv import load_dotenv
-
-# Carrega as chaves do arquivo .env
-load_dotenv()
-
-def get_spotify_client():
-    """
-    Inicializa o cliente do Spotify usando Client ID e Client Secret.
-    """
-    client_id = os.getenv("SPOTIPY_CLIENT_ID")
-    client_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
-    
-    if not client_id or not client_secret:
-        # Se não houver chaves, retornamos None para que o sistema saiba que está desativado
-        return None
-        
-    auth_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
-    return spotipy.Spotify(auth_manager=auth_manager)
+import subprocess
+import sys
 
 def fetch_spotify_playlist(playlist_url):
     """
-    Busca todas as músicas de uma playlist usando a API Oficial.
+    Extrai faixas de uma playlist usando yt-dlp e captura logs detalhados de erro.
     """
-    sp = get_spotify_client()
-    if not sp:
-        print("Erro: Chaves do Spotify não configuradas no .env")
-        return []
-
     try:
-        # Extrai o ID da playlist da URL
-        playlist_id = playlist_url.split("/")[-1].split("?")[0]
+        cmd = [
+            sys.executable, "-m", "yt_dlp",
+            "--flat-playlist",
+            "--print", "title",
+            playlist_url
+        ]
         
-        results = sp.playlist_items(playlist_id)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        
         tracks = []
-        
-        for item in results['items']:
-            track = item['track']
-            if track:
-                title = track['name']
-                artist = track['artists'][0]['name']
-                tracks.append({
-                    "title": title,
-                    "artist": artist,
-                    "search_query": f"{artist} - {title}",
-                    "spotify_id": track['id'],
-                    "cover_url": track['album']['images'][0]['url'] if track['album']['images'] else None
-                })
-        
+        for line in result.stdout.splitlines():
+            full_title = line.strip()
+            if ' - ' in full_title:
+                artist, title = full_title.split(' - ', 1)
+            else:
+                artist, title = "Desconhecido", full_title
+            
+            tracks.append({
+                "title": title.strip(),
+                "artist": artist.strip(),
+                "search_query": f"{artist.strip()} - {title.strip()}"
+            })
+            
         return tracks
-    except Exception as e:
-        print(f"Erro ao buscar playlist do Spotify: {e}")
+        
+    except subprocess.CalledProcessError as e:
+        # AQUI VEM O ERRO REAL
+        print(f"DEBUG: O yt-dlp falhou. Mensagem de erro do sistema: {e.stderr}")
         return []
-
-if __name__ == "__main__":
-    # Teste rápido (ex: Top 50 Brasil)
-    test_url = "https://open.spotify.com/playlist/37i9dQZEVXbMDoHDwfs2tB"
-    print(f"Buscando músicas de: {test_url}")
-    songs = fetch_spotify_playlist(test_url)
-    for s in songs[:5]: # Mostra as 5 primeiras
-        print(f"- {s['search_query']}")
+    except Exception as e:
+        print(f"Erro inesperado: {e}")
+        return []

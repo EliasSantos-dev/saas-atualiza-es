@@ -1,11 +1,39 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'node:path'
-import { list } from 'drivelist'
+import { exec } from 'node:child_process'
 import fs from 'node:fs'
 import crypto from 'node:crypto'
 import axios from 'axios'
+import { fileURLToPath } from 'node:url'
 
-// ... (existing environment setup)
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
+
+let win: BrowserWindow | null
+
+function createWindow() {
+  win = new BrowserWindow({
+    width: 1024,
+    height: 768,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.mjs'),
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  })
+
+  // Test active push message to Renderer-process.
+  win.webContents.on('did-finish-load', () => {
+    win?.webContents.send('main-process-message', (new Date).toLocaleString())
+  })
+
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL)
+  } else {
+    // win.loadFile('dist/index.html')
+    win.loadFile(path.join(__dirname, '../dist/index.html'))
+  }
+}
 
 function calculateFileHash(filePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -19,8 +47,36 @@ function calculateFileHash(filePath: string): Promise<string> {
 
 // IPC Handlers
 ipcMain.handle('list-drives', async () => {
-  const drives = await list()
-  return drives.filter(d => d.isRemovable || d.isUSB)
+  return new Promise((resolve) => {
+    // 2 = Removable disk (USB)
+    exec('wmic logicaldisk get caption,drivetype /format:csv', (error, stdout) => {
+      if (error) {
+        console.error('Error listing drives:', error)
+        return resolve([])
+      }
+      
+      const drives = []
+      const lines = stdout.trim().split('\n').slice(1) // Skip header
+      
+      for (const line of lines) {
+        const parts = line.trim().split(',')
+        if (parts.length >= 3) {
+          const letter = parts[1]
+          const type = parts[2]
+          
+          if (type === '2') { // Removable
+            drives.push({
+              device: letter,
+              mountpoints: [{ path: letter + '\\' }],
+              isRemovable: true,
+              isUSB: true
+            })
+          }
+        }
+      }
+      resolve(drives)
+    })
+  })
 })
 
 ipcMain.handle('scan-pendrive-files', async (_, drivePath: string) => {

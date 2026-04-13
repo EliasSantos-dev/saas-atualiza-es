@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Dict
 from datetime import datetime
 
 class FileEntry(BaseModel):
@@ -12,3 +12,4 @@ class Snapshot(BaseModel):
     version: str
     created_at: datetime = datetime.now()
     files: List[FileEntry]
+    folder_links: Dict[str, str] = {}
