@@ -1,29 +1,63 @@
-from bs4 import BeautifulSoup
-import requests
+import os
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+from dotenv import load_dotenv
 
-def parse_spotify_playlist_html(html_content):
-    soup = BeautifulSoup(html_content, 'html.parser')
-    tracks = []
+# Carrega as chaves do arquivo .env
+load_dotenv()
+
+def get_spotify_client():
+    """
+    Inicializa o cliente do Spotify usando Client ID e Client Secret.
+    """
+    client_id = os.getenv("SPOTIPY_CLIENT_ID")
+    client_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
     
-    rows = soup.find_all('div', attrs={'data-testid': 'tracklist-row'})
-    for row in rows:
-        title_elem = row.find('div', class_=lambda c: c and 'standalone-ellipsis-one-line' in c)
-        artist_elem = row.find('a', href=lambda h: h and '/artist/' in h)
+    if not client_id or not client_secret:
+        # Se não houver chaves, retornamos None para que o sistema saiba que está desativado
+        return None
         
-        if title_elem and artist_elem:
-            title = title_elem.text.strip()
-            artist = artist_elem.text.strip()
-            tracks.append({
-                "title": title,
-                "artist": artist,
-                "search_query": f"{artist} - {title}"
-            })
-    return tracks
+    auth_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
+    return spotipy.Spotify(auth_manager=auth_manager)
 
-def fetch_spotify_playlist(url):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    return parse_spotify_playlist_html(response.text)
+def fetch_spotify_playlist(playlist_url):
+    """
+    Busca todas as músicas de uma playlist usando a API Oficial.
+    """
+    sp = get_spotify_client()
+    if not sp:
+        print("Erro: Chaves do Spotify não configuradas no .env")
+        return []
+
+    try:
+        # Extrai o ID da playlist da URL
+        playlist_id = playlist_url.split("/")[-1].split("?")[0]
+        
+        results = sp.playlist_items(playlist_id)
+        tracks = []
+        
+        for item in results['items']:
+            track = item['track']
+            if track:
+                title = track['name']
+                artist = track['artists'][0]['name']
+                tracks.append({
+                    "title": title,
+                    "artist": artist,
+                    "search_query": f"{artist} - {title}",
+                    "spotify_id": track['id'],
+                    "cover_url": track['album']['images'][0]['url'] if track['album']['images'] else None
+                })
+        
+        return tracks
+    except Exception as e:
+        print(f"Erro ao buscar playlist do Spotify: {e}")
+        return []
+
+if __name__ == "__main__":
+    # Teste rápido (ex: Top 50 Brasil)
+    test_url = "https://open.spotify.com/playlist/37i9dQZEVXbMDoHDwfs2tB"
+    print(f"Buscando músicas de: {test_url}")
+    songs = fetch_spotify_playlist(test_url)
+    for s in songs[:5]: # Mostra as 5 primeiras
+        print(f"- {s['search_query']}")

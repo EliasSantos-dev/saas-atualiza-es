@@ -30,3 +30,17 @@ def test_calculate_delta_updated_file():
     delta = calculate_delta(client_files, server_files)
     assert len(delta["to_download"]) == 1
     assert delta["to_download"][0]["path"] == "song.mp3"
+
+def test_calculate_delta_rename_file():
+    # O hash é o mesmo, mas o caminho mudou
+    client_files = [{"path": "01. Musica.mp3", "hash": "hash_top", "size": 100}]
+    server_files = [{"path": "05. Musica.mp3", "hash": "hash_top", "size": 100}]
+    
+    delta = calculate_delta(client_files, server_files)
+    
+    # Não deve baixar, deve renomear
+    assert len(delta["to_download"]) == 0
+    assert len(delta["to_delete"]) == 0
+    assert len(delta["to_rename"]) == 1
+    assert delta["to_rename"][0]["old_path"] == "01. Musica.mp3"
+    assert delta["to_rename"][0]["new_path"] == "05. Musica.mp3"
