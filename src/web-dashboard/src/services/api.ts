@@ -6,6 +6,13 @@ const api = axios.create({
   baseURL: API_URL,
 });
 
+export const authService = {
+  login: async (username: string, password: string) => {
+    const response = await api.post('/auth/login', { username, password });
+    return response.data;
+  }
+};
+
 export const profileService = {
   list: async () => {
     const response = await api.get('/profiles/');

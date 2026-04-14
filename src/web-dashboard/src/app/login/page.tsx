@@ -1,112 +1,105 @@
 "use client";
 
-import { useState } from 'react';
-import { Disc, ArrowRight, Lock, Mail, Loader2 } from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { Disc, Lock, User, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const { login } = useAuth();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setLoading(true);
     
-    // Simulação de login para o MVP (redireciona baseado no e-mail para teste)
-    setTimeout(() => {
-      if (email.includes('admin')) {
-        router.push('/admin');
-      } else if (email.includes('revenda')) {
-        router.push('/reseller');
-      } else {
-        router.push('/user');
-      }
+    try {
+      await login({ username, password });
+    } catch (err: any) {
+      setError(err.message || 'Erro ao realizar login');
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (
-    <main className="min-h-screen bg-pulse-dark text-pulse-textPrimary flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
-      {/* Decorative background */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-pulse-red rounded-full blur-[150px] opacity-10 pointer-events-none"></div>
-
-      <div className="w-full max-w-md relative z-10">
+    <div className="min-h-screen flex items-center justify-center bg-pulse-dark p-6">
+      <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-10">
-          <div className="text-pulse-red mb-4">
-            <Disc size={48} className="animate-[spin_4s_linear_infinite]" />
+          <div className="bg-pulse-red/10 p-4 rounded-3xl border border-pulse-red/20 mb-4">
+            <Disc size={48} className="text-pulse-red animate-spin-slow" />
           </div>
-          <h1 className="text-2xl font-black tracking-widest uppercase">
+          <h1 className="text-4xl font-black tracking-tighter uppercase text-pulse-textPrimary">
             PULSE<span className="text-pulse-red">DRIVE</span>
           </h1>
-          <p className="text-pulse-textSecondary text-sm mt-2">Acesse sua conta para continuar</p>
+          <p className="text-pulse-textSecondary font-medium text-sm mt-2 uppercase tracking-widest">
+            Painel Administrativo
+          </p>
         </div>
 
-        {/* Login Card */}
-        <div className="bg-pulse-surface p-8 rounded-3xl border border-pulse-border shadow-2xl">
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-pulse-textSecondary mb-2 ml-1">E-mail</label>
+        {/* Form Card */}
+        <div className="bg-pulse-surface p-8 rounded-[2rem] border border-pulse-border shadow-2xl">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            
+            {error && (
+              <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-sm font-bold">
+                <AlertCircle size={20} />
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-[10px] text-pulse-textSecondary font-black uppercase tracking-widest px-1">Usuário ou E-mail</label>
               <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-pulse-textSecondary group-focus-within:text-pulse-red transition-colors" size={18} />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-pulse-textSecondary group-focus-within:text-pulse-red transition-colors">
+                  <User size={18} />
+                </div>
                 <input 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="exemplo@email.com"
-                  className="w-full bg-pulse-dark border border-pulse-border rounded-xl py-4 pl-12 pr-4 text-sm focus:outline-none focus:border-pulse-red transition-all"
+                  type="text"
                   required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full bg-pulse-dark border border-pulse-border rounded-2xl py-4 pl-12 pr-4 font-bold text-sm focus:outline-none focus:border-pulse-red transition-all"
+                  placeholder="admin@pulsedrive.com"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-pulse-textSecondary mb-2 ml-1">Senha</label>
+            <div className="space-y-2">
+              <label className="text-[10px] text-pulse-textSecondary font-black uppercase tracking-widest px-1">Senha</label>
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-pulse-textSecondary group-focus-within:text-pulse-red transition-colors" size={18} />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-pulse-textSecondary group-focus-within:text-pulse-red transition-colors">
+                  <Lock size={18} />
+                </div>
                 <input 
-                  type="password" 
+                  type="password"
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-pulse-dark border border-pulse-border rounded-2xl py-4 pl-12 pr-4 font-bold text-sm focus:outline-none focus:border-pulse-red transition-all"
                   placeholder="••••••••"
-                  className="w-full bg-pulse-dark border border-pulse-border rounded-xl py-4 pl-12 pr-4 text-sm focus:outline-none focus:border-pulse-red transition-all"
-                  required
                 />
               </div>
             </div>
 
             <button 
+              type="submit"
               disabled={loading}
-              className="w-full bg-pulse-red hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all py-4 rounded-xl font-black text-white flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(255,59,59,0.3)] uppercase tracking-widest"
+              className="w-full bg-pulse-red hover:bg-red-500 disabled:opacity-50 transition-all py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(255,59,59,0.3)] mt-2"
             >
-              {loading ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : (
-                <>Entrar na conta <ArrowRight size={18} /></>
-              )}
+              {loading ? 'Entrando...' : 'Acessar Painel'}
             </button>
           </form>
-
-          <div className="mt-8 pt-8 border-t border-pulse-border text-center">
-            <p className="text-sm text-pulse-textSecondary">
-              Ainda não tem conta?{' '}
-              <Link href="/#pricing" className="text-pulse-red font-bold hover:underline">
-                Ver Planos
-              </Link>
-            </p>
-          </div>
         </div>
 
-        {/* Demo hints */}
-        <div className="mt-8 grid grid-cols-3 gap-2 opacity-40 hover:opacity-100 transition-opacity">
-          <div className="text-[10px] text-center border border-pulse-border p-2 rounded-lg cursor-pointer" onClick={() => setEmail('admin@pulse.com')}>Admin Demo</div>
-          <div className="text-[10px] text-center border border-pulse-border p-2 rounded-lg cursor-pointer" onClick={() => setEmail('revenda@pulse.com')}>Reseller Demo</div>
-          <div className="text-[10px] text-center border border-pulse-border p-2 rounded-lg cursor-pointer" onClick={() => setEmail('user@pulse.com')}>User Demo</div>
-        </div>
+        <p className="text-center mt-8 text-[10px] text-pulse-textSecondary font-black uppercase tracking-widest">
+          © 2026 PulseDrive Engine • v2.0 NestJS
+        </p>
       </div>
-    </main>
+    </div>
   );
 }

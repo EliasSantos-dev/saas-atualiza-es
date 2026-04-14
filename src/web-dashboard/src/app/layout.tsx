@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "PulseDrive - O Som do seu Carro Atualizado",
@@ -17,7 +18,9 @@ export default function RootLayout({
       className="h-full antialiased dark"
     >
       <body className="min-h-full flex flex-col bg-pulse-dark text-pulse-textPrimary font-sans">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
